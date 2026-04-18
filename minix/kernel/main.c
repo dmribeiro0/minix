@@ -366,7 +366,7 @@ void prepare_shutdown(const int how)
   // Banner de poweroff
   printf("=======================================\n");
   printf("| ATE A PROXIMA - SO - UNIFESP 1s2026 |\n");
-  printf("|    Projeto Pratico (I) - Equipe X   |\n");
+  printf("|    Projeto Pratico (I) - Equipe 4   |\n");
   printf("=======================================\n");
   set_kernel_timer(&shutdown_timer, get_monotonic() + system_hz,
       minix_shutdown, how);
