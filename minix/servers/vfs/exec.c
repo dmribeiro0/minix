@@ -185,6 +185,9 @@ static int vfs_memmap(struct exec_info *execi,
 int pm_exec(vir_bytes path, size_t path_len, vir_bytes frame, size_t frame_len,
 	vir_bytes *pc, vir_bytes *newsp, vir_bytes *UNUSED(ps_str))
 {
+  // printf for debugging purposes
+  printf("Executando pm_exec\n");
+  	
 /* Perform the execve(name, argv, envp) call.  The user library builds a
  * complete stack image, including pointers, args, environ, etc.  The stack
  * is copied to a buffer inside VFS, and then to the new core image.
@@ -246,6 +249,12 @@ int pm_exec(vir_bytes path, size_t path_len, vir_bytes frame, size_t frame_len,
   strlcpy(finalexec, fullpath, PATH_MAX);
   strlcpy(firstexec, fullpath, PATH_MAX);
 
+  // Print the executable file path
+  // printing all of them for debugging purposes
+  printf("Requested: %s\n", fullpath);
+  printf("Final exec: %s\n", finalexec);
+  printf("First exec: %s\n", firstexec);
+
   /* Get_read_vp will return an opened vn in execi.
    * if necessary it releases the existing vp so we can
    * switch after we find out what's inside the file.
@@ -262,8 +271,15 @@ int pm_exec(vir_bytes path, size_t path_len, vir_bytes frame, size_t frame_len,
 	 * args to stack and retrieve the new binary
 	 * name into fullpath.
 	 */
+
+	// Print if script
+    printf("Script detected: %s\n", fullpath);
+    
 	FAILCHECK(fetch_name(path, path_len, fullpath));
 	FAILCHECK(patch_stack(execi.vp, mbuf, &frame_len, fullpath, &vsp));
+
+    // Print
+    printf("Interpreter to execute: %s\n", fullpath);  
 
 	strlcpy(finalexec, fullpath, PATH_MAX);
   	strlcpy(firstexec, fullpath, PATH_MAX);
@@ -304,12 +320,19 @@ int pm_exec(vir_bytes path, size_t path_len, vir_bytes frame, size_t frame_len,
 	/* Remember it */
 	strlcpy(execi.execname, finalexec, PATH_MAX);
 
+	// Print final executable
+	printf("Final executable: %s\n", finalexec);
+
 	/* The executable we need to execute first (loader)
 	 * is in elf_interpreter, and has to be in fullpath to
 	 * be looked up
 	 */
 	strlcpy(fullpath, elf_interpreter, PATH_MAX);
 	strlcpy(firstexec, elf_interpreter, PATH_MAX);
+
+	// Print ld.so  
+	printf("Dynamic loader (first exec): %s\n", fullpath);  
+	  
 	Get_read_vp(execi, fullpath, 0, 0, &resolve, fp);
   }
 
