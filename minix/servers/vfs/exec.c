@@ -318,7 +318,7 @@ int pm_exec(vir_bytes path, size_t path_len, vir_bytes frame, size_t frame_len,
 	strlcpy(execi.execname, finalexec, PATH_MAX);
 
 	// Print final executable
-	printf("Executando (finalexec): %s\n", finalexec);
+	// printf("Executando (finalexec): %s\n", finalexec);
 
 	/* The executable we need to execute first (loader)
 	 * is in elf_interpreter, and has to be in fullpath to
