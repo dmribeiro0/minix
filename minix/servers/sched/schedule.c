@@ -6,6 +6,11 @@
  *   do_stop_scheduling   Request to stop scheduling a proc
  *   do_nice		  Request to change the nice level on a proc
  *   init_scheduling      Called from main.c to set up/prepare scheduling
+ *
+ * MODIFICADO: Escalonamento alterado para Round Robin puro.
+ *   - do_noquantum: removida a penalidade de prioridade (priority += 1).
+ *     O processo volta para o fim da mesma fila sem ser rebaixado.
+ *   - balance_queues: simplificada, pois processos nunca sao rebaixados.
  */
 #include "sched.h"
 #include "schedproc.h"
@@ -96,9 +101,19 @@ int do_noquantum(message *m_ptr)
 	}
 
 	rmp = &schedproc[proc_nr_n];
-	if (rmp->priority < MIN_USER_Q) {
-		rmp->priority += 1; /* lower priority */
-	}
+
+	/* MODIFICACAO - ROUND ROBIN:
+	 * Removida a penalidade de prioridade do escalonador original:
+	 *
+	 *   ORIGINAL (escalonador com multiplas filas):
+	 *     if (rmp->priority < MIN_USER_Q) {
+	 *         rmp->priority += 1;  <- rebaixava o processo de fila
+	 *     }
+	 *
+	 *   ROUND ROBIN (sem penalidade):
+	 *     O processo mantem sua prioridade e volta para o fim
+	 *     da mesma fila, garantindo alternancia circular igualitaria.
+	 */
 
 	if ((rv = schedule_process_local(rmp)) != OK) {
 		return rv;
@@ -345,24 +360,29 @@ void init_scheduling(void)
  *				balance_queues				     *
  *===========================================================================*/
 
-/* This function in called every N ticks to rebalance the queues. The current
- * scheduler bumps processes down one priority when ever they run out of
- * quantum. This function will find all proccesses that have been bumped down,
- * and pulls them back up. This default policy will soon be changed.
+/* MODIFICACAO - ROUND ROBIN:
+ * No escalonador original, esta funcao reequilibrava as filas porque
+ * do_noquantum rebaixava processos de prioridade ao esgotar o quantum.
+ * Com Round Robin puro, processos nunca sao rebaixados, entao nao ha
+ * necessidade de rebalancear. Mantemos apenas o re-alarme do timer
+ * para compatibilidade com o sistema.
+ *
+ * ORIGINAL:
+ *   for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
+ *       if (rmp->flags & IN_USE) {
+ *           if (rmp->priority > rmp->max_priority) {
+ *               rmp->priority -= 1;  <- subia prioridade de volta
+ *               schedule_process_local(rmp);
+ *           }
+ *       }
+ *   }
  */
 void balance_queues(void)
 {
-	struct schedproc *rmp;
-	int r, proc_nr;
+	int r;
 
-	for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
-		if (rmp->flags & IN_USE) {
-			if (rmp->priority > rmp->max_priority) {
-				rmp->priority -= 1; /* increase priority */
-				schedule_process_local(rmp);
-			}
-		}
-	}
+	/* Round Robin: sem rebalanceamento necessario.
+	 * Processos nunca sao rebaixados de fila em do_noquantum. */
 
 	if ((r = sys_setalarm(balance_timeout, 0)) != OK)
 		panic("sys_setalarm failed: %d", r);
