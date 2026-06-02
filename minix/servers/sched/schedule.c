@@ -360,29 +360,24 @@ void init_scheduling(void)
  *				balance_queues				     *
  *===========================================================================*/
 
-/* MODIFICACAO - ROUND ROBIN:
- * No escalonador original, esta funcao reequilibrava as filas porque
- * do_noquantum rebaixava processos de prioridade ao esgotar o quantum.
- * Com Round Robin puro, processos nunca sao rebaixados, entao nao ha
- * necessidade de rebalancear. Mantemos apenas o re-alarme do timer
- * para compatibilidade com o sistema.
- *
- * ORIGINAL:
- *   for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
- *       if (rmp->flags & IN_USE) {
- *           if (rmp->priority > rmp->max_priority) {
- *               rmp->priority -= 1;  <- subia prioridade de volta
- *               schedule_process_local(rmp);
- *           }
- *       }
- *   }
+/* This function in called every N ticks to rebalance the queues. The current
+ * scheduler bumps processes down one priority when ever they run out of
+ * quantum. This function will find all proccesses that have been bumped down,
+ * and pulls them back up. This default policy will soon be changed.
  */
 void balance_queues(void)
 {
-	int r;
+	struct schedproc *rmp;
+	int r, proc_nr;
 
-	/* Round Robin: sem rebalanceamento necessario.
-	 * Processos nunca sao rebaixados de fila em do_noquantum. */
+	for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
+		if (rmp->flags & IN_USE) {
+			if (rmp->priority > rmp->max_priority) {
+				rmp->priority -= 1; /* increase priority */
+				schedule_process_local(rmp);
+			}
+		}
+	}
 
 	if ((r = sys_setalarm(balance_timeout, 0)) != OK)
 		panic("sys_setalarm failed: %d", r);
