@@ -10,7 +10,8 @@
  * MODIFICADO: Escalonamento alterado para Round Robin puro.
  *   - do_noquantum: removida a penalidade de prioridade (priority += 1).
  *     O processo volta para o fim da mesma fila sem ser rebaixado.
- *   - balance_queues: simplificada, pois processos nunca sao rebaixados.
+ *   - do_nice: adicionada uma condicao para impedir que processos de usuario
+ *     tivessem sua prioridade alterada.
  */
 #include "sched.h"
 #include "schedproc.h"
