@@ -284,6 +284,24 @@ int do_nice(message *m_ptr)
 	}
 
 	rmp = &schedproc[proc_nr_n];
+
+	/* MODIFICACAO - ROUND ROBIN:
+	 * Adicao de condicao que impede que qualquer processo de usuario
+	 * tenha sua prioridade alterada pelo nice:
+	 *
+	 *   ORIGINAL:
+	 *     O processo de usuario teria sua prioridade alterada de acordo
+	 *     com a chamada nice.
+	 *
+	 *   ROUND ROBIN:
+	 *     O processo mantem sua prioridade mesmo se houver uma tentativa
+	 *     forcada de altera-la.
+	 */
+
+	if (rmp->max_priority == USER_Q) {
+        return OK;
+	}
+	
 	new_q = m_ptr->m_pm_sched_scheduling_set_nice.maxprio;
 	if (new_q >= NR_SCHED_QUEUES) {
 		return EINVAL;
