@@ -60,6 +60,14 @@ static int try_one(endpoint_t receive_e, struct proc *src_ptr,
 static struct proc * pick_proc(void);
 static void enqueue_head(struct proc *rp);
 
+//Função de número aleaório
+static unsigned long lottery_seed = 12345UL;
+
+static int lottery_rand(void) {
+	lottery_seed = lottery_seed * 1103515245UL + 12345UL;
+	return (int)((lottery_seed >> 16) & 0x7FFF);
+}
+
 /* all idles share the same idle_priv structure */
 static struct priv idle_priv;
 
@@ -133,6 +141,7 @@ void proc_init(void)
 		rp->p_endpoint = _ENDPOINT(0, rp->p_nr); /* generation no. 0 */
 		rp->p_scheduler = NULL;		/* no user space scheduler */
 		rp->p_priority = 0;		/* no priority */
+		rp->p_tickets = 10;
 		rp->p_quantum_size_ms = 0;	/* no quantum size */
 
 		/* arch-specific initialization */
@@ -1791,25 +1800,36 @@ static struct proc * pick_proc(void)
  * This function always uses the run queues of the local cpu!
  */
   register struct proc *rp;			/* process to run */
-  struct proc **rdy_head;
-  int q;				/* iterate over queues */
 
-  /* Check each of the scheduling queues for ready processes. The number of
-   * queues is defined in proc.h, and priorities are set in the task table.
-   * If there are no processes ready to run, return NULL.
-   */
-  rdy_head = get_cpulocal_var(run_q_head);
-  for (q=0; q < NR_SCHED_QUEUES; q++) {	
-	if(!(rp = rdy_head[q])) {
-		TRACE(VF_PICKPROC, printf("cpu %d queue %d empty\n", cpuid, q););
-		continue;
+  int q, total_tickets = 0, winning_ticket, count;				/* iterate over queues */
+
+  
+ //Conta total de bilhetes nos processos prontos
+  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+        for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+            if (rp->p_tickets > 0)
+                total_tickets += rp->p_tickets;
+        }
+   }
+
+	if(total_tickets == 0){
+		return proc_addr(IDLE);
 	}
-	assert(proc_is_runnable(rp));
-	if (priv(rp)->s_flags & BILLABLE)	 	
-		get_cpulocal_var(bill_ptr) = rp; /* bill for system time */
+
+	//Sorteia o bilhete vencedor
+	winning_ticket = lottery_rand() % total_tickets;
+
+	// Percorre as filas para achar o dono do bilhete vencedor
+	count = 0;
+    for (q = 0; q < NR_SCHED_QUEUES; q++) {
+        for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+            if (rp->p_tickets <= 0) continue;
+            count += rp->p_tickets;
+            if (count > winning_ticket)
 	return rp;
-  }
-  return NULL;
+  		}
+	}
+	return proc_addr(IDLE);
 }
 
 /*===========================================================================*
