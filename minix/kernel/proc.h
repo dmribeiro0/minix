@@ -134,6 +134,7 @@ struct proc {
 #if DEBUG_TRACE
   int p_schedules;
 #endif
+	int p_tickets;
 };
 
 #endif /* __ASSEMBLY__ */
