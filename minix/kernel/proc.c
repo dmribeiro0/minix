@@ -41,6 +41,7 @@
 
 #include <minix/syslib.h>
 
+#define DEFAULT_TICKETS  10
 /* Scheduling and message passing functions */
 static void idle(void);
 /**
@@ -141,7 +142,7 @@ void proc_init(void)
 		rp->p_endpoint = _ENDPOINT(0, rp->p_nr); /* generation no. 0 */
 		rp->p_scheduler = NULL;		/* no user space scheduler */
 		rp->p_priority = 0;		/* no priority */
-		rp->p_tickets = 10;
+		rp->p_tickets = DEFAULT_TICKETS;
 		rp->p_quantum_size_ms = 0;	/* no quantum size */
 
 		/* arch-specific initialization */
@@ -1801,15 +1802,12 @@ static struct proc * pick_proc(void)
  */
   register struct proc *rp;			/* process to run */
 
-  int q, total_tickets = 0, winning_ticket, count;				/* iterate over queues */
+  int q, has_user = 0;				/* iterate over queues */
 
   
  //Conta total de bilhetes nos processos prontos
-  for (q = 0; q < NR_SCHED_QUEUES; q++) {
-        for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
-            if (rp->p_tickets > 0)
-                total_tickets += rp->p_tickets;
-        }
+  for (q = MAX_USER_Q; q <= MIN_USER_Q; q++) {
+       if(rdy_head[q] != NIL_PROC
    }
 
 	if(total_tickets == 0){
