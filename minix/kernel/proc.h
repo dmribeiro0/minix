@@ -56,6 +56,10 @@ struct proc {
 
   clock_t p_dequeued;		/* uptime at which process was last dequeued */
 
+  /* Escalonamento Garantido */
+  clock_t p_guaranteed_start;   /* uptime quando o proc entrou pela 1a vez na fila */
+  u32_t   p_guaranteed_cpu;     /* ticks de CPU efetivamente recebidos */
+
   clock_t p_user_time;		/* user time in ticks */
   clock_t p_sys_time;		/* sys time in ticks */
 
