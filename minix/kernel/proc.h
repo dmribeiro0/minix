@@ -27,6 +27,8 @@ struct proc {
   volatile u32_t p_rts_flags;	/* process is runnable only if zero */
   volatile u32_t p_misc_flags;	/* flags that do not suspend the process */
 
+  int p_tickets;
+
   char p_priority;		/* current process priority */
   u64_t p_cpu_time_left;	/* time left to use the cpu */
   unsigned p_quantum_size_ms;	/* assigned time quantum in ms
@@ -125,7 +127,7 @@ struct proc {
 
   int p_found;	/* consistency checking variables */
   int p_magic;		/* check validity of proc pointers */
-  int p_tickets;
+  
 
   /* if MF_SC_DEFER is set, this struct is valid and contains the
    * do_ipc() arguments that are still to be executed
