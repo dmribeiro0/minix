@@ -1765,6 +1765,10 @@ void dequeue(struct proc *rp)
 	
   /* Process accounting for scheduling */
   rp->p_accounting.dequeues++;
+  
+  /* GARANTIDO: contabiliza mais um tick de CPU recebido */
+  if (rp->p_guaranteed_start != 0)
+      rp->p_guaranteed_cpu++;
 
   /* this is not all that accurate on virtual machines, especially with
      IO bound processes that only spend a short amount of time in the queue
