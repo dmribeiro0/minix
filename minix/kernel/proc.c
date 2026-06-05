@@ -1607,6 +1607,12 @@ void enqueue(
   int q = rp->p_priority;	 		/* scheduling queue to use */
   struct proc **rdy_head, **rdy_tail;
   
+  /* GARANTIDO: marca o instante de criação na primeira vez que entra na fila */
+  if (rp->p_guaranteed_start == 0) {
+      rp->p_guaranteed_start = get_monotonic();
+      rp->p_guaranteed_cpu   = 0;
+  }
+
   assert(proc_is_runnable(rp));
 
   assert(q >= 0);
