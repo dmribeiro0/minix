@@ -41,6 +41,9 @@
 
 #include <minix/syslib.h>
 
+// Adicao para Algoritmo Loteria
+#include <minix/include/config.h>
+
 #define DEFAULT_TICKETS  10
 /* Scheduling and message passing functions */
 static void idle(void);
@@ -1802,8 +1805,8 @@ static struct proc * pick_proc(void)
 
   /* Verificar se há processos de usuário prontos */
   int has_user = 0;
-  for (q = 0; q < NR_SCHED_QUEUES; q++) {
-    if (rdy_head[q] && isuserp(rdy_head[q])) {
+  for (q = USER_Q; q < NR_SCHED_QUEUES; q++) {
+    if (rdy_head[q]) {
       has_user = 1;
       break;
     }
@@ -1823,26 +1826,23 @@ static struct proc * pick_proc(void)
 
   /* Somar total de bilhetes dos processos de usuário */
   int total_tickets = 0;
-  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+  for (q = USER_Q; q < NR_SCHED_QUEUES; q++) {
     for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
-      if (isuserp(rp))
-        total_tickets += rp->p_tickets;
+      total_tickets += rp->p_tickets;
     }
   }
 
   /* Sortear e selecionar o vencedor */
   int winning = lottery_rand(total_tickets);
   int count = 0;
-  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+  for (q = USER_Q; q < NR_SCHED_QUEUES; q++) {
     for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
-      if (isuserp(rp)) {
-        count += rp->p_tickets;
-        if (count >= winning) {
-          assert(proc_is_runnable(rp));
-          if (priv(rp)->s_flags & BILLABLE)
-            get_cpulocal_var(bill_ptr) = rp;
-          return rp;
-        }
+      count += rp->p_tickets;
+      if (count >= winning) {
+        assert(proc_is_runnable(rp));
+        if (priv(rp)->s_flags & BILLABLE)
+          get_cpulocal_var(bill_ptr) = rp;
+        return rp;
       }
     }
   }
