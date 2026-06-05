@@ -125,6 +125,7 @@ struct proc {
 
   int p_found;	/* consistency checking variables */
   int p_magic;		/* check validity of proc pointers */
+  int p_tickets;
 
   /* if MF_SC_DEFER is set, this struct is valid and contains the
    * do_ipc() arguments that are still to be executed
@@ -134,7 +135,7 @@ struct proc {
 #if DEBUG_TRACE
   int p_schedules;
 #endif
-	int p_tickets;
+	
 };
 
 #endif /* __ASSEMBLY__ */
