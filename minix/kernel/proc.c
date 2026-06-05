@@ -42,7 +42,7 @@
 #include <minix/syslib.h>
 
 // Adicao para Algoritmo Loteria
-#include <minix/include/config.h>
+#include <minix/config.h>
 
 #define DEFAULT_TICKETS  10
 /* Scheduling and message passing functions */
