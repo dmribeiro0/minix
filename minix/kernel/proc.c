@@ -1794,40 +1794,60 @@ void dequeue(struct proc *rp)
  *===========================================================================*/
 static struct proc * pick_proc(void)
 {
-/* Decide who to run now.  A new process is selected and returned.
- * When a billable process is selected, record it in 'bill_ptr', so that the 
- * clock task can tell who to bill for system time.
- *
- * This function always uses the run queues of the local cpu!
- */
-  register struct proc *rp;			/* process to run */
+  register struct proc *rp;
+  struct proc **rdy_head;
+  int q;
 
-  int q, has_user = 0;				/* iterate over queues */
+  rdy_head = get_cpulocal_var(run_q_head);
 
-  
- //Conta total de bilhetes nos processos prontos
-  for (q = MAX_USER_Q; q <= MIN_USER_Q; q++) {
-       if(rdy_head[q] != NIL_PROC
-   }
+  /* Verificar se há processos de usuário prontos */
+  int has_user = 0;
+  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+    if (rdy_head[q] && isuserp(rdy_head[q])) {
+      has_user = 1;
+      break;
+    }
+  }
 
-	if(total_tickets == 0){
-		return proc_addr(IDLE);
-	}
-
-	//Sorteia o bilhete vencedor
-	winning_ticket = lottery_rand() % total_tickets;
-
-	// Percorre as filas para achar o dono do bilhete vencedor
-	count = 0;
+  /* Se não há processos de usuário, comportamento original */
+  if (!has_user) {
     for (q = 0; q < NR_SCHED_QUEUES; q++) {
-        for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
-            if (rp->p_tickets <= 0) continue;
-            count += rp->p_tickets;
-            if (count > winning_ticket)
-	return rp;
-  		}
-	}
-	return proc_addr(IDLE);
+      if (!(rp = rdy_head[q])) continue;
+      assert(proc_is_runnable(rp));
+      if (priv(rp)->s_flags & BILLABLE)
+        get_cpulocal_var(bill_ptr) = rp;
+      return rp;
+    }
+    return NULL;
+  }
+
+  /* Somar total de bilhetes dos processos de usuário */
+  int total_tickets = 0;
+  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+    for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+      if (isuserp(rp))
+        total_tickets += rp->p_tickets;
+    }
+  }
+
+  /* Sortear e selecionar o vencedor */
+  int winning = lottery_rand(total_tickets);
+  int count = 0;
+  for (q = 0; q < NR_SCHED_QUEUES; q++) {
+    for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+      if (isuserp(rp)) {
+        count += rp->p_tickets;
+        if (count >= winning) {
+          assert(proc_is_runnable(rp));
+          if (priv(rp)->s_flags & BILLABLE)
+            get_cpulocal_var(bill_ptr) = rp;
+          return rp;
+        }
+      }
+    }
+  }
+
+  return NULL;
 }
 
 /*===========================================================================*
