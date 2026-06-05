@@ -1768,7 +1768,7 @@ void dequeue(struct proc *rp)
   
   /* GARANTIDO: contabiliza mais um tick de CPU recebido */
   if (rp->p_guaranteed_start != 0)
-      rp->p_guaranteed_cpu++;
+    rp->p_guaranteed_cpu++;
 
   /* this is not all that accurate on virtual machines, especially with
      IO bound processes that only spend a short amount of time in the queue
@@ -1794,32 +1794,82 @@ void dequeue(struct proc *rp)
  *===========================================================================*/
 static struct proc * pick_proc(void)
 {
-/* Decide who to run now.  A new process is selected and returned.
- * When a billable process is selected, record it in 'bill_ptr', so that the 
- * clock task can tell who to bill for system time.
- *
- * This function always uses the run queues of the local cpu!
+/* ESCALONAMENTO GARANTIDO para processos de usuário.
+ * - Filas de sistema: mantêm prioridade absoluta (comportamento original).
+ * - Filas de usuário: escolhe o processo com menor razão 'cpu_recebido/cpu_prometido'.
  */
-  register struct proc *rp;			/* process to run */
+  register struct proc *rp;
   struct proc **rdy_head;
-  int q;				/* iterate over queues */
+  int q;
 
-  /* Check each of the scheduling queues for ready processes. The number of
-   * queues is defined in proc.h, and priorities are set in the task table.
-   * If there are no processes ready to run, return NULL.
-   */
+  /*Filas de sistema: comportamento original */
   rdy_head = get_cpulocal_var(run_q_head);
-  for (q=0; q < NR_SCHED_QUEUES; q++) {	
-	if(!(rp = rdy_head[q])) {
-		TRACE(VF_PICKPROC, printf("cpu %d queue %d empty\n", cpuid, q););
-		continue;
-	}
-	assert(proc_is_runnable(rp));
-	if (priv(rp)->s_flags & BILLABLE)	 	
-		get_cpulocal_var(bill_ptr) = rp; /* bill for system time */
-	return rp;
+  for (q = 0; q < USER_Q; q++) {
+      if (!(rp = rdy_head[q])) continue;
+      assert(proc_is_runnable(rp));
+      if (priv(rp)->s_flags & BILLABLE)
+          get_cpulocal_var(bill_ptr) = rp;
+      return rp;
   }
-  return NULL;
+
+  /*Filas de usuário: escalonamento garantido*/
+  {
+      struct proc *escolhido = NULL;
+      u32_t melhor_razao = 0xFFFFFFFFUL; /* maior valor possível */
+      clock_t agora = get_monotonic();
+      int n_prontos = 0;
+
+      /* 1) conta quantos processos de usuário estão prontos */
+      for (q = USER_Q; q <= MIN_USER_Q; q++) {
+          for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+              n_prontos++;
+          }
+      }
+
+      if (n_prontos == 0) return NULL;
+
+      /* 2) para cada processo, calcula a razão e guarda o menor */
+      for (q = USER_Q; q <= MIN_USER_Q; q++) {
+          for (rp = rdy_head[q]; rp != NULL; rp = rp->p_nextready) {
+              u32_t razao;
+              clock_t decorrido;
+              clock_t prometido;
+
+              assert(proc_is_runnable(rp));
+
+              /* Tempo decorrido desde a criação do processo */
+              if (rp->p_guaranteed_start == 0 || agora <= rp->p_guaranteed_start) {
+                  /* Processo recém-criado (ainda sem histórico): prioridade máxima */
+                  razao = 0;
+              } else {
+                  decorrido = agora - rp->p_guaranteed_start;
+
+                  /* CPU prometida = tempo_decorrido/ número_de_processos
+                   * Se prometido for 0 (processo muito novo), trata como 1 para evitar divisão por zero */
+                  prometido = decorrido / (clock_t)n_prontos;
+                  if (prometido == 0) prometido = 1;
+
+                  /* Razão * 1000 (precisão sem ponto flutuante)
+                   * razao < 1000 => recebeu menos que o prometido (prejudicado)
+                   * razao > 1000 => recebeu mais que o prometido  */
+                  razao = ((u32_t)rp->p_guaranteed_cpu * 1000UL) / (u32_t)prometido;
+              }
+
+              /* Guarda o processo mais prejudicado */
+              if (razao < melhor_razao) {
+                  melhor_razao = razao;
+                  escolhido = rp;
+              }
+          }
+      }
+
+      if (escolhido != NULL) {
+          if (priv(escolhido)->s_flags & BILLABLE)
+              get_cpulocal_var(bill_ptr) = escolhido;
+      }
+
+      return escolhido;
+  }
 }
 
 /*===========================================================================*
