@@ -64,9 +64,9 @@ static void enqueue_head(struct proc *rp);
 //Função de número aleaório
 static unsigned long lottery_seed = 12345UL;
 
-static int lottery_rand(void) {
-	lottery_seed = lottery_seed * 1103515245UL + 12345UL;
-	return (int)((lottery_seed >> 16) & 0x7FFF);
+static int lottery_rand(int total) {
+    lottery_seed = lottery_seed * 1103515245UL + 12345UL;
+    return (int)((lottery_seed >> 16) % (unsigned long)total) + 1;
 }
 
 /* all idles share the same idle_priv structure */
