@@ -27,6 +27,7 @@ struct proc {
   volatile u32_t p_rts_flags;	/* process is runnable only if zero */
   volatile u32_t p_misc_flags;	/* flags that do not suspend the process */
 
+  /* Modificacao: Loteria*/
   int p_tickets;
 
   char p_priority;		/* current process priority */
