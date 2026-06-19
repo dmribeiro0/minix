@@ -14,13 +14,29 @@ O trabalho está sendo desenvolvido pelos alunos como parte das atividades acad�
 
 ## Sobre o Repositório
 
-Este repositório é uma **cópia (fork)** do repositório original do Minix. A partir dessa base, estão sendo implementadas alterações no kernel com o objetivo de explorar, na prática, conceitos fundamentais de sistemas operacionais, tais como:
+Este repositório é uma **cópia (fork)** do repositório original do Minix 3 utilizada para o desenvolvimento do projeto final da disciplina de Sistemas Operacionais.
 
-* Gerenciamento de processos
-* Comunicação entre processos (IPC)
-* Gerenciamento de memória
-* Chamadas de sistema
-* Estrutura interna do kernel
+As modificações realizadas concentram-se na implementação e avaliação de diferentes políticas de escalonamento de processos. Para facilitar a organização e comparação entre as soluções desenvolvidas, cada algoritmo foi implementado em uma branch independente:
+
+- `algoritmo/round-robin`
+- `algoritmo/loteria`
+- `algoritmo/garantido`
+
+Cada branch contém uma implementação completa e funcional do respectivo algoritmo de escalonamento, permitindo sua execução e análise de forma isolada.
+
+## Algoritmos Implementados
+
+### Round Robin (`algoritmo/round-robin`)
+
+Implementado por meio de alterações no servidor de escalonamento (`servers/sched/schedule.c`), removendo os mecanismos de ajuste dinâmico de prioridade para processos de usuário. Dessa forma, todos os processos permanecem na mesma fila de prioridade e são executados em rodízio circular utilizando quanta de tempo iguais.
+
+### Escalonamento por Loteria (`algoritmo/loteria`)
+
+Implementado no kernel por meio de modificações em `kernel/proc.h` e `kernel/proc.c`. Cada processo recebe uma quantidade de bilhetes e, a cada decisão de escalonamento, é realizado um sorteio para determinar qual processo receberá a CPU. Processos com mais bilhetes possuem maior probabilidade de serem selecionados.
+
+### Escalonamento Garantido (`algoritmo/garantido`)
+
+Implementado através de modificações no kernel e no servidor de escalonamento. O algoritmo monitora o tempo de CPU efetivamente recebido por cada processo e compara esse valor com a parcela de CPU que deveria ter recebido. A CPU é sempre atribuída ao processo mais prejudicado, buscando garantir uma distribuição justa do tempo de processamento.
 
 ## Objetivo
 
